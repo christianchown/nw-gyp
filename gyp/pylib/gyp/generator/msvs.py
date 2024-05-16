@@ -2638,7 +2638,7 @@ def _GetMSBuildProjectConfigurations(configurations):
   return [group]
 
 
-def _GetMSBuildGlobalProperties(spec, guid, gyp_file_name):
+def _GetMSBuildGlobalProperties(spec, guid, gyp_file_name, configurations):
   namespace = os.path.splitext(gyp_file_name)[0]
   properties = [
       ['PropertyGroup', {'Label': 'Globals'},
@@ -2649,8 +2649,14 @@ def _GetMSBuildGlobalProperties(spec, guid, gyp_file_name):
       ]
     ]
 
-  if os.environ.get('PROCESSOR_ARCHITECTURE') == 'AMD64' or \
-     os.environ.get('PROCESSOR_ARCHITEW6432') == 'AMD64':
+  is_x64 = False
+  for (name, settings) in configurations.iteritems():
+    configuration, platform = _GetConfigurationAndPlatform(name, settings)
+    if platform == 'x64':
+      is_x64 = True
+      break
+
+  if is_x64 and (os.environ.get('PROCESSOR_ARCHITECTURE') == 'AMD64' or os.environ.get('PROCESSOR_ARCHITEW6432') == 'AMD64'):
     properties[0].append(['PreferredToolArchitecture', 'x64'])
 
   if spec.get('msvs_enable_winrt'):
@@ -3336,7 +3342,7 @@ def _GenerateMSBuildProject(project, options, version, generator_flags):
       }]
 
   content += _GetMSBuildProjectConfigurations(configurations)
-  content += _GetMSBuildGlobalProperties(spec, project.guid, project_file_name)
+  content += _GetMSBuildGlobalProperties(spec, project.guid, project_file_name, configurations)
   content += import_default_section
   content += _GetMSBuildConfigurationDetails(spec, project.build_file)
   if spec.get('msvs_enable_winphone'):
